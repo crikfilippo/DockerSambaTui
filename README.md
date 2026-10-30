@@ -128,6 +128,10 @@ tests/               test senza Docker
 ANALISI.md           analisi: funzionamento, scelte, rischi
 ```
 
+## Licenza
+
+MIT, vedi [`LICENSE`](LICENSE). L'immagine include anche le licenze dei due tool in `/usr/share/doc/samba-tui/`; Samba è GPL (pacchetto Ubuntu).
+
 ## Crediti
 
 tui-samba e tui-users sono di [tui-tools](https://github.com/tui-tools) (licenza MIT) e vengono compilati dal loro sorgente durante la build.
