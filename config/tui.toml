@@ -1,0 +1,3 @@
+# Configurazione comune a tui-samba e tui-users nel container.
+# Nel container si lavora gia' come root: nessun prefisso sudo.
+sudo = ""

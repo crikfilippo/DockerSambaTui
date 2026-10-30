@@ -1,0 +1,42 @@
+==============================================================
+  SERVER SAMBA - gestione con tui-users e tui-samba
+==============================================================
+Entra con:  docker exec -it samba bash
+Comandi:    tui-users   utenti e gruppi Unix
+            tui-samba   account Samba e share
+            guida       rivedi questo messaggio
+
+CREARE UN GRUPPO (prima di tutto)
+  tui-users -> tab fino alla schermata dei gruppi -> n
+  Nomi sempre minuscoli (es. amministrazione, dipendenti).
+  Evita nomi di sistema (dip, staff, adm...): se esistono, la creazione fallisce.
+
+CREARE UN UTENTE (due passaggi, in quest'ordine)
+  1) tui-users -> n
+       Name ........ minuscolo
+       Groups ...... il suo gruppo di livello (separati da spazio)
+       Create home . NO (da disattivare a ogni utente)
+     La shell e' gia' nologin e non serve una password Unix.
+     Il gruppo principale e' "users" in automatico.
+  2) tui-samba -> tasto 2 (Accounts) -> a -> imposta la password SMB
+     (quella che l'utente usera' per collegarsi)
+
+CREARE UNA SHARE (tui-samba -> tasto 1 -> n)
+  Path ........... /shares/<nome>  (sempre un path NUOVO sotto /shares)
+  Create the path  si
+  Owner:group .... root:users      (gia' compilato)
+  Valid users .... gruppi ammessi, es. @amministrazione @dipendenti
+  Write list ..... gruppi che possono scrivere, con Read only = si;
+                   oppure lascia vuota con Read only = no
+  Create mask .... 0660
+  Directory mask . 2775
+  Conferma: il reload di Samba e' l'ultimo passo (tasto r se serve).
+
+NOTE
+  - Le cartelle gia' esistenti NON vengono modificate da tui-samba:
+    crea sempre le share con un path nuovo.
+  - Nuovi file e cartelle ereditano gruppo e permessi dalla share.
+  - Per eliminare un utente: prima l'account Samba
+    (tui-samba -> 2 -> x), poi l'utente Unix (tui-users -> D).
+  - Dati persistenti: /config (configurazione e account) e /shares (file).
+==============================================================

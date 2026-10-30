@@ -1,0 +1,17 @@
+services:
+  samba:
+    build: .
+    image: samba-tui:latest
+    container_name: samba
+    hostname: samba
+    restart: unless-stopped
+    ports:
+      - "445:445"
+    volumes:
+      - ./config:/config
+      - ./shares:/shares
+    healthcheck:
+      test: ["CMD", "pgrep", "-x", "smbd"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

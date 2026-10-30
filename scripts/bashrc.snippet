@@ -1,0 +1,6 @@
+
+# --- samba-tui: messaggio iniziale nelle shell interattive ---
+if [ -n "${PS1:-}" ] && [ -z "${SAMBA_TUI_BANNER:-}" ]; then
+  export SAMBA_TUI_BANNER=1
+  cat /usr/local/share/samba-tui/banner.txt
+fi

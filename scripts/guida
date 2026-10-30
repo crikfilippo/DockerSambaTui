@@ -1,0 +1,2 @@
+#!/bin/sh
+cat /usr/local/share/samba-tui/banner.txt

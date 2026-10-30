@@ -1,0 +1,25 @@
+#!/bin/sh
+# Finto systemctl: nel container non c'e' systemd. tui-samba chiede lo stato
+# del servizio con
+#   systemctl show <unit> --property=LoadState --property=ActiveState --property=UnitFileState
+# e prova prima smb.service, poi smbd.service. Qui "smbd" risulta attivo
+# se il processo gira. Tutto il resto risulta inesistente.
+
+if [ "${1:-}" != "show" ]; then
+  echo "systemctl: non disponibile in questo container" >&2
+  exit 1
+fi
+
+case "${2:-}" in
+  smbd|smbd.service)
+    if pgrep -x smbd > /dev/null 2>&1; then
+      active=active
+    else
+      active=inactive
+    fi
+    printf 'LoadState=loaded\nActiveState=%s\nUnitFileState=enabled\n' "$active"
+    ;;
+  *)
+    printf 'LoadState=not-found\nActiveState=inactive\nUnitFileState=\n'
+    ;;
+esac
