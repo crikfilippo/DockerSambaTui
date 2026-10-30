@@ -19,6 +19,8 @@ Nato per condividere cartelle di lavoro (per esempio le collection di [Bruno](ht
 
 - Docker con Compose v2. Con la build dal sorgente serve internet (immagini `golang` e `ubuntu`, pacchetti Samba, clone dei due tool da GitHub); con l'immagine già pronta (vedi sotto) non serve niente.
 - Un filesystem host che supporti proprietari e permessi Unix per le cartelle `config/` e `shares/` (non NTFS, exFAT o share di rete montate senza `chown`).
+  - Il bind mount (`./config`, `./shares`) funziona su host **Linux** con un filesystem Unix (ext4, xfs, btrfs, zfs) o dentro WSL2. Su macOS e su Windows con cartelle `C:\` il filesystem condiviso non rispetta owner, gruppo e setgid: i nuovi file escono `root:root` e il gruppo `users` non viene ereditato (ok solo per prove rapide). Per i dati reali usa **volumi Docker con nome** (`volumes: [samba-config:/config, samba-shares:/shares]` + sezione `volumes:`), che funzionano ovunque.
+  - Con SELinux (Fedora, RHEL) aggiungi `:z` ai bind mount.
 - La porta 445 libera sull'host.
 
 ## Avvio

@@ -39,4 +39,7 @@ NOTE
   - Per eliminare un utente: prima l'account Samba
     (tui-samba -> 2 -> x), poi l'utente Unix (tui-users -> D).
   - Dati persistenti: /config (configurazione e account) e /shares (file).
+  - Volumi: su host Linux (ext4/xfs/btrfs/zfs) o WSL2 va bene il
+    bind mount; su macOS/Windows (C:\) owner e setgid non valgono
+    (file nuovi root:root): per dati reali usa volumi Docker con nome.
 ==============================================================
