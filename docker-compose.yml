@@ -5,6 +5,7 @@ services:
     container_name: samba
     hostname: samba
     restart: unless-stopped
+    init: true
     logging:
       driver: json-file
       options:

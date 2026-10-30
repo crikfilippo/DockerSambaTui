@@ -1,0 +1,10 @@
+/.claude
+/.vscode
+/dist
+
+# Dati creati a runtime da docker compose (utenti, hash delle password, share)
+/config/accounts
+/config/samba
+/config/var-lib-samba
+/config/.initialized
+/shares
