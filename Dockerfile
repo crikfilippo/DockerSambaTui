@@ -35,6 +35,11 @@ RUN cd /src/tui-users \
  && go build -trimpath -ldflags "-s -w -X main.version=${TUI_USERS_REF}" \
       -o /out/tui-users ./cmd/tui-users
 
+# Licenze MIT dei due tool: vanno distribuite insieme ai binari.
+RUN mkdir -p /out/licenses \
+ && cp /src/tui-samba/LICENSE /out/licenses/tui-samba.LICENSE \
+ && cp /src/tui-users/LICENSE /out/licenses/tui-users.LICENSE
+
 # ---------------------------------------------------------------------------
 # Stage 2: immagine finale
 # ---------------------------------------------------------------------------
@@ -69,6 +74,7 @@ COPY smb.conf /usr/share/samba-tui/smb.conf
 RUN testparm -s /usr/share/samba-tui/smb.conf > /dev/null
 
 COPY --from=build /out/tui-samba /out/tui-users /usr/local/bin/
+COPY --from=build /out/licenses/ /usr/share/doc/samba-tui/
 COPY config/tui.toml /etc/tui-samba/config.toml
 COPY config/tui.toml /etc/tui-users/config.toml
 COPY scripts/systemctl /usr/bin/systemctl
