@@ -52,7 +52,7 @@ Campi del form di una nuova share:
 | Owner:group | `root:users` (già compilato) |
 | Valid users | gruppi ammessi, es. `@amministrazione @dipendenti` |
 | Write list | gruppi che possono scrivere, con "Read only" = sì; oppure vuoto con "Read only" = no |
-| Create mask / Directory mask | `0660` / `2775` |
+| Create mask / Directory mask | `0664` / `0775` (default del form; ignorate perché i permessi sono ereditati) |
 
 tui-samba non modifica le cartelle già esistenti: se un path esiste, owner e mode restano quelli che ha.
 

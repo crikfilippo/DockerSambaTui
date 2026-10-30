@@ -28,8 +28,8 @@ CREARE UNA SHARE (tui-samba -> tasto 1 -> n)
   Valid users .... gruppi ammessi, es. @amministrazione @dipendenti
   Write list ..... gruppi che possono scrivere, con Read only = si;
                    oppure lascia vuota con Read only = no
-  Create mask .... 0660
-  Directory mask . 2775
+  Create mask .... 0664   (lascia il default: i permessi sono ereditati
+  Directory mask . 0775    dalla cartella, queste maschere sono ignorate)
   Conferma: il reload di Samba e' l'ultimo passo (tasto r se serve).
 
 NOTE

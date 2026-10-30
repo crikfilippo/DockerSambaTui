@@ -5,6 +5,11 @@ services:
     container_name: samba
     hostname: samba
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "445:445"
     volumes:
