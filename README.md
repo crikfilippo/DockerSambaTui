@@ -1,137 +1,146 @@
 # samba-tui
 
-Un server Samba in un container Ubuntu 26.04 LTS, gestibile interamente da terminale con due TUI: [tui-users](https://github.com/tui-tools/tui-users) per utenti e gruppi Unix e [tui-samba](https://github.com/tui-tools/tui-samba) per account Samba e share. Nessuna interfaccia web, nessun systemd, due soli volumi.
+A Samba server in an Ubuntu 26.04 LTS container, managed entirely from the terminal with two TUIs: [tui-users](https://github.com/tui-tools/tui-users) for Unix users and groups, and [tui-samba](https://github.com/tui-tools/tui-samba) for Samba accounts and shares. No web interface, no systemd, two volumes.
 
-Nato per condividere cartelle di lavoro (per esempio le collection di [Bruno](https://www.usebruno.com/)) fra più persone con un server centrale: chi salva un file lo rende subito disponibile agli altri, senza push o pull.
+Built to share working folders (for example [Bruno](https://www.usebruno.com/) collections) among several people through a central server: whoever saves a file makes it available to the others immediately, with no push or pull.
 
-> **Stato del progetto:** l'immagine è stata costruita e provata (Docker Desktop su Mac, `docker compose`, `smbclient`, Finder): avvio, persistenza dopo il riavvio, gruppi e utenti, scrittura da più utenti di gruppi diversi, sola lettura e rifiuto degli utenti non ammessi. Non provati: client Windows, Office reale, host Linux di produzione. I punti aperti sono in [`ANALISI.md`](ANALISI.md). Anche tui-users e tui-samba sono software molto giovane (beta) e il TUI mostra `(untested)` accanto alla versione di Samba.
+> **Project status:** the image has been built and tested (Docker Desktop on Mac, `docker compose`, `smbclient`, Finder): startup, persistence after restart, groups and users, writes by several users in different groups, read-only shares, and rejection of users who are not allowed. Not tested: Windows clients, real Office, a production Linux host. Open points are in [`ANALISI.md`](ANALISI.md) (in Italian). tui-users and tui-samba are also very young software (beta), and the TUI shows `(untested)` next to the Samba version.
 
-## Cosa fa
+## Features
 
-- Ubuntu 26.04 LTS con Samba 4.23 (solo SMB2+, porta 445, nessun accesso guest).
-- Gestione da terminale: `tui-users` e `tui-samba`, già configurati per girare come root nel container.
-- Due volumi: `/config` (configurazione Samba, database delle password, account Unix) e `/shares` (la cartella padre di tutte le share).
-- Nuovi file e cartelle ereditano gruppo e permessi dalla share che li contiene.
-- Ogni nuovo utente ha `users` come gruppo principale, shell `nologin` e nessuna password Unix.
-- Un messaggio iniziale con la procedura compare nei log (`docker logs`) e a ogni `docker exec -it samba bash`.
-- Log di Samba su `docker logs` (`log level = 3`, ruotati dal compose: 10 MB x 3). Livello modificabile a caldo: `smbcontrol all debug N`.
-- File di sistema inutili (`Thumbs.db`, `desktop.ini`, `.DS_Store`, `._*`) rifiutati dal server. I lock di Office `~$*` no, servono per l'avviso "file in uso".
+- Ubuntu 26.04 LTS with Samba 4.23 (SMB2+ only, port 445, no guest access).
+- Terminal management: `tui-users` and `tui-samba`, already configured to run as root in the container.
+- Two volumes: `/config` (Samba configuration, password database, Unix accounts) and `/shares` (the parent folder of all shares).
+- New files and folders inherit group and permissions from the share that contains them.
+- Every new user has `users` as primary group, the `nologin` shell, and no Unix password.
+- A startup message with the procedure appears in the logs (`docker logs`) and in every `docker exec -it samba bash` session (the message is in Italian).
+- Samba logs go to `docker logs` (`log level = 3`, rotated by compose: 10 MB x 3). The level can be changed at runtime: `smbcontrol all debug N`.
+- Useless system files (`Thumbs.db`, `desktop.ini`, `.DS_Store`, `._*`) are rejected by the server. Office lock files (`~$*`) are not, since they provide the "file in use" warning.
 
-## Requisiti
+## Requirements
 
-- Docker con Compose v2. Con la build dal sorgente serve internet (immagini `golang` e `ubuntu`, pacchetti Samba, clone dei due tool da GitHub); con l'immagine già pronta (vedi sotto) non serve niente. Con `docker run` (senza compose) aggiungi `--init`.
-- Un filesystem che supporti proprietari e permessi Unix per `config/` e `shares/` (non NTFS, exFAT o share di rete montate senza `chown`).
-  - Il bind mount (`./config`, `./shares`) funziona su host **Linux** con un filesystem Unix (ext4, xfs, btrfs, zfs) o dentro WSL2. Su macOS e su Windows con cartelle `C:\` il filesystem condiviso non rispetta owner, gruppo e setgid: i nuovi file escono `root:root` e il gruppo `users` non viene ereditato (ok solo per prove rapide). Per i dati reali usa **volumi Docker con nome** (`volumes: [samba-config:/config, samba-shares:/shares]` + sezione `volumes:`), che funzionano ovunque.
-  - Con SELinux (Fedora, RHEL) aggiungi `:z` ai bind mount.
-- La porta 445 libera sull'host. Sul Mac che ospita il server, Finder e Cmd+K non si collegano alla 445 locale: per le prove pubblica `127.0.0.2:445:445` dopo `sudo ifconfig lo0 alias 127.0.0.2` (si azzera al riavvio) e collegati a `smb://utente@127.0.0.2`. Da un altro computer non serve.
+- Docker with Compose v2. The prebuilt image is published for `linux/amd64` and `linux/arm64`. Building from source needs internet access (`golang` and `ubuntu` images, Samba packages, the two tools cloned from GitHub). With plain `docker run` (no compose) add `--init`.
+- A filesystem that supports Unix owners and permissions for `config/` and `shares/` (not NTFS, exFAT, or network shares mounted without `chown`).
+  - Bind mounts (`./config`, `./shares`) work on **Linux** hosts with a Unix filesystem (ext4, xfs, btrfs, zfs) or inside WSL2. On macOS and on Windows with `C:\` folders the shared filesystem does not honor owner, group and setgid: new files end up `root:root` and the `users` group is not inherited (fine for quick tests only). For real data use **named Docker volumes** (`volumes: [samba-config:/config, samba-shares:/shares]` plus a top-level `volumes:` section), which work everywhere.
+  - With SELinux (Fedora, RHEL) add `:z` to the bind mounts.
+- Port 445 free on the host. On the Mac that hosts the server, Finder and Cmd+K cannot connect to the local port 445: for tests publish `127.0.0.2:445:445` after `sudo ifconfig lo0 alias 127.0.0.2` (reset at reboot) and connect to `smb://user@127.0.0.2`. Not needed from another computer.
 
-## Avvio
+## Quick start
+
+Using the published image:
 
 ```bash
-git clone <questo repository> samba-tui
-cd samba-tui
-docker compose up -d --build
-docker logs samba            # mostra il messaggio iniziale
-docker exec -it samba bash   # entra e usa tui-users / tui-samba / guida
+git clone https://github.com/crikfilippo/DockerSambaTui.git
+cd DockerSambaTui
+docker compose up -d          # pulls ghcr.io/crikfilippo/docker-samba-tui:latest
+docker logs samba             # shows the startup message
+docker exec -it samba bash    # enter and use tui-users / tui-samba / guida
 ```
 
-## Uso
+Building from source instead: `docker compose up -d --build`.
 
-L'ordine conta: gruppo, utente Unix, account Samba, share.
+To pin a version, change `image:` in `docker-compose.yml` to a tag such as `ghcr.io/crikfilippo/docker-samba-tui:0.1.0`.
 
-| Cosa | Dove | Come |
+## Usage
+
+Order matters: group, Unix user, Samba account, share.
+
+| What | Where | How |
 |---|---|---|
-| Gruppo | `tui-users` | `tab` fino ai gruppi, poi `n`. Nomi minuscoli. |
-| Utente Unix | `tui-users` | `n`; "Groups" con il suo gruppo di livello; **"Create home" = no**. |
-| Account Samba | `tui-samba` | `2` (Accounts), `a`, imposta la password SMB. |
-| Share | `tui-samba` | `1` (Shares), `n`, vedi sotto. |
-| Eliminare un utente | entrambi | prima `x` in `tui-samba` (Accounts), poi `D` in `tui-users`. |
+| Group | `tui-users` | `tab` to the groups screen, then `n`. Lowercase names. |
+| Unix user | `tui-users` | `n`; "Groups" with the user's level group; **"Create home" = no**. |
+| Samba account | `tui-samba` | `2` (Accounts), `a`, set the SMB password. |
+| Share | `tui-samba` | `1` (Shares), `n`, see below. |
+| Delete a user | both | first `x` in `tui-samba` (Accounts), then `D` in `tui-users`. |
 
-Campi del form di una nuova share:
+Fields of the new share form:
 
-| Campo | Valore |
+| Field | Value |
 |---|---|
-| Path | `/shares/<nome>`, sempre un path **nuovo** |
-| Create the path | sì |
-| Owner:group | `root:users` (già compilato) |
-| Valid users | gruppi ammessi, es. `@amministrazione @dipendenti` |
-| Write list | gruppi che possono scrivere, con "Read only" = sì; oppure vuoto con "Read only" = no |
-| Create mask / Directory mask | `0664` / `0775` (default del form; ignorate perché i permessi sono ereditati) |
+| Path | `/shares/<name>`, always a **new** path |
+| Create the path | yes |
+| Owner:group | `root:users` (pre-filled) |
+| Valid users | allowed groups, e.g. `@management @staff` |
+| Write list | groups that can write, with "Read only" = yes; or empty with "Read only" = no |
+| Create mask / Directory mask | `0664` / `0775` (form defaults; ignored because permissions are inherited) |
 
-tui-samba non modifica le cartelle già esistenti: se un path esiste, owner e mode restano quelli che ha.
+tui-samba does not modify existing folders: if a path already exists, its owner and mode stay as they are.
 
-## Collegarsi dai client
+## Connecting from clients
 
-- Windows: `\\<host>\<share>` (o "Connetti unità di rete").
+- Windows: `\\<host>\<share>` (or "Map network drive").
 - macOS: `smb://<host>/<share>`.
-- Linux: `sudo mount -t cifs //<host>/<share> /mnt/<share> -o username=<utente>`.
+- Linux: `sudo mount -t cifs //<host>/<share> /mnt/<share> -o username=<user>`.
 
-Si accede con il nome dell'utente e la password impostata in tui-samba. Se più persone modificano lo stesso file contemporaneamente, vince l'ultimo salvataggio.
+Log in with the user name and the password set in tui-samba. If several people edit the same file at the same time, the last save wins.
 
-## Configurazione della build
+## Build configuration
 
-Argomenti del Dockerfile (`docker compose build --build-arg NOME=valore`):
+Dockerfile arguments (`docker compose build --build-arg NAME=value`):
 
-| Argomento | Default | Significato |
+| Argument | Default | Meaning |
 |---|---|---|
-| `TUI_SAMBA_REF` | `v0.2.4` | tag di tui-samba da compilare |
-| `TUI_USERS_REF` | `v0.2.2` | tag di tui-users da compilare |
-| `DEFAULT_OWNER` | `root:users` | valore proposto in "Owner:group" |
-| `GO_IMAGE` | `golang:bookworm` | immagine usata per compilare |
+| `TUI_SAMBA_REF` | `v0.2.4` | tui-samba tag to build |
+| `TUI_USERS_REF` | `v0.2.2` | tui-users tag to build |
+| `DEFAULT_OWNER` | `root:users` | value proposed in "Owner:group" |
+| `GO_IMAGE` | `golang:bookworm` | image used to compile |
 
-Se cambi i tag, la build si ferma con un errore chiaro quando la riga da modificare in `form.go` non esiste più.
+If you change the tags, the build stops with a clear error when the line to patch in `form.go` no longer exists.
 
-## Immagine già pronta (senza internet)
+## Publishing the image
 
-Per costruire l'immagine e salvarla in un file (default `linux/amd64`, cartella `dist/`):
-
-```
-sh build/export-image.sh [cartella] [piattaforma]
-```
-
-Sul server: `docker load < samba-tui-amd64.tar.gz`, poi `docker compose up -d` (senza `--build`). Con `docker run` aggiungi `--init`.
-
-## Persistenza
-
-Tutto ciò che conta sta nei due volumi montati su `/config` e `/shares` (nel compose di esempio le cartelle `config/` e `shares/`):
-
-- `config/samba/` è `/etc/samba` (compreso `smb.conf` e `tui-samba.d/`).
-- `config/var-lib-samba/` è `/var/lib/samba` (database delle password Samba).
-- `config/accounts/` contiene copie di `passwd`, `group`, `shadow`, `gshadow`, `subuid`, `subgid`, aggiornate entro 2 secondi da ogni modifica e ripristinate a ogni avvio.
-
-Fai il backup di entrambe le cartelle insieme: gli account Samba hanno senso solo con gli utenti Unix corrispondenti.
-
-## Sicurezza
-
-- Samba è l'unico controllo di accesso: le cartelle sono aperte ai membri di `users` a livello di filesystem. Va bene finché nessuno accede ai file in altri modi (shell nel container, altri servizi).
-- Non esporre la porta 445 su internet: usa una rete fidata o una VPN.
-- `config/` contiene hash delle password: proteggila come un backup di credenziali.
-
-## Test
+Multi-architecture build and push to GitHub Container Registry (after `docker login ghcr.io` with a token that has `write:packages`):
 
 ```bash
-tests/test-scripts.sh [percorso/di/tui-samba/cmd/tui-samba/form.go]
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --label org.opencontainers.image.source=https://github.com/crikfilippo/DockerSambaTui \
+  --label org.opencontainers.image.licenses=MIT \
+  -t ghcr.io/crikfilippo/docker-samba-tui:0.1.0 \
+  -t ghcr.io/crikfilippo/docker-samba-tui:latest \
+  --push .
 ```
 
-Verifica sintassi degli script, persistenza degli account, `systemctl` finto e (se passi `form.go`) la patch del default.
+## Persistence
 
-## Struttura
+Everything that matters is in the two volumes mounted on `/config` and `/shares` (in the sample compose, the `config/` and `shares/` folders):
+
+- `config/samba/` is `/etc/samba` (including `smb.conf` and `tui-samba.d/`).
+- `config/var-lib-samba/` is `/var/lib/samba` (Samba password database).
+- `config/accounts/` holds copies of `passwd`, `group`, `shadow`, `gshadow`, `subuid`, `subgid`, updated within 2 seconds of every change and restored at every start.
+
+Back up both folders together: Samba accounts only make sense with the matching Unix users.
+
+## Security
+
+- Samba is the only access control: folders are open to members of `users` at the filesystem level. This is fine as long as nobody accesses the files in other ways (shell in the container, other services).
+- Do not expose port 445 to the internet: use a trusted network or a VPN.
+- `config/` contains password hashes: protect it like a credentials backup.
+
+## Tests
+
+```bash
+tests/test-scripts.sh [path/to/tui-samba/cmd/tui-samba/form.go]
+```
+
+Checks script syntax, account persistence, the fake `systemctl` and (if you pass `form.go`) the default-owner patch.
+
+## Layout
 
 ```
-Dockerfile           build in due stadi (compila i tool, poi Ubuntu 26.04 + Samba)
-docker-compose.yml   un servizio, due volumi
-smb.conf             configurazione di partenza (solo al primo avvio)
-config/tui.toml      configurazione comune dei due tool (sudo = "")
-scripts/             entrypoint, finto systemctl, messaggio iniziale
-build/               patch del default di tui-samba, export-image.sh
-tests/               test senza Docker
-ANALISI.md           analisi: funzionamento, scelte, rischi
+Dockerfile           two-stage build (compiles the tools, then Ubuntu 26.04 + Samba)
+docker-compose.yml   one service, two volumes
+smb.conf             starting configuration (first start only)
+config/tui.toml      shared configuration of the two tools (sudo = "")
+scripts/             entrypoint, fake systemctl, startup message
+build/               patch for the tui-samba default owner
+tests/               tests that run without Docker
+ANALISI.md           analysis: how it works, choices, risks (in Italian)
 ```
 
-## Licenza
+## License
 
-MIT, vedi [`LICENSE`](LICENSE). L'immagine include anche le licenze dei due tool in `/usr/share/doc/samba-tui/`; Samba è GPL (pacchetto Ubuntu).
+MIT, see [`LICENSE`](LICENSE). The image also includes the licenses of the two tools in `/usr/share/doc/samba-tui/`; Samba is GPL (Ubuntu package).
 
-## Crediti
+## Credits
 
-tui-samba e tui-users sono di [tui-tools](https://github.com/tui-tools) (licenza MIT) e vengono compilati dal loro sorgente durante la build.
+tui-samba and tui-users are by [tui-tools](https://github.com/tui-tools) (MIT license) and are compiled from their source during the build.

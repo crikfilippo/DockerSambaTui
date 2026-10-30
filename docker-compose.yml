@@ -1,7 +1,7 @@
 services:
   samba:
     build: .
-    image: samba-tui:latest
+    image: ghcr.io/crikfilippo/docker-samba-tui:latest
     container_name: samba
     hostname: samba
     restart: unless-stopped

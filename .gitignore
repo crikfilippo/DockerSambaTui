@@ -1,6 +1,5 @@
 /.claude
 /.vscode
-/dist
 
 # Dati creati a runtime da docker compose (utenti, hash delle password, share)
 /config/accounts
