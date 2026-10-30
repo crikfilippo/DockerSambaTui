@@ -1,40 +1,10 @@
 # syntax=docker/dockerfile:1
 
-# ---------------------------------------------------------------------------
-# Stage 1: compila tui-samba (con l'unico default modificato) e tui-users
-# ---------------------------------------------------------------------------
-ARG GO_IMAGE=golang:bookworm
-FROM ${GO_IMAGE} AS build
-
-ARG TUI_SAMBA_REF=v0.2.4
-ARG TUI_USERS_REF=v0.2.2
-ARG DEFAULT_OWNER=root:users
-
-# I go.mod dei due tool richiedono Go 1.27.x: l'immagine golang usa
-# GOTOOLCHAIN=local di default, qui lasciamo che scarichi la versione giusta.
-ENV GOTOOLCHAIN=auto \
-    CGO_ENABLED=0
-
-RUN git clone --depth 1 --branch "${TUI_SAMBA_REF}" https://github.com/tui-tools/tui-samba.git /src/tui-samba \
- && git clone --depth 1 --branch "${TUI_USERS_REF}" https://github.com/tui-tools/tui-users.git /src/tui-users
-
-# Unica modifica al sorgente: valore proposto nel campo "Owner:group" del form
-# di creazione share. Lo script fallisce se la riga non esiste piu'.
-COPY build/patch-owner.sh /patch-owner.sh
-RUN sh /patch-owner.sh /src/tui-samba/cmd/tui-samba/form.go "${DEFAULT_OWNER}"
-
-RUN cd /src/tui-samba \
- && go build -trimpath -ldflags "-s -w -X main.version=${TUI_SAMBA_REF}+owner" \
-      -o /out/tui-samba ./cmd/tui-samba
-RUN cd /src/tui-users \
- && go build -trimpath -ldflags "-s -w -X main.version=${TUI_USERS_REF}" \
-      -o /out/tui-users ./cmd/tui-users
-
-# ---------------------------------------------------------------------------
-# Stage 2: immagine finale
-# ---------------------------------------------------------------------------
+# I binari di tui-samba e tui-users sono gia' compilati in bin/<arch>/
+# (si rigenerano con build/rebuild-binaries.sh).
 FROM debian:bookworm-slim
 
+ARG TARGETARCH
 ENV LANG=C.UTF-8
 
 RUN apt-get update \
@@ -63,7 +33,7 @@ RUN mkdir -p /usr/share/samba-tui/seed \
 COPY smb.conf /usr/share/samba-tui/smb.conf
 RUN testparm -s /usr/share/samba-tui/smb.conf > /dev/null
 
-COPY --from=build /out/tui-samba /out/tui-users /usr/local/bin/
+COPY bin/${TARGETARCH}/tui-samba bin/${TARGETARCH}/tui-users /usr/local/bin/
 COPY config/tui.toml /etc/tui-samba/config.toml
 COPY config/tui.toml /etc/tui-users/config.toml
 COPY scripts/systemctl /usr/bin/systemctl

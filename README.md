@@ -17,7 +17,7 @@ Nato per condividere cartelle di lavoro (per esempio le collection di [Bruno](ht
 
 ## Requisiti
 
-- Docker con Compose v2 e accesso a internet durante la build (clona i due tool da GitHub e scarica la toolchain Go richiesta).
+- Docker con Compose v2 e accesso a internet durante la build (solo per l'immagine `debian:bookworm-slim` e i pacchetti Samba). I due tool sono già compilati in `bin/`.
 - Un filesystem host che supporti proprietari e permessi Unix per le cartelle `config/` e `shares/` (non NTFS, exFAT o share di rete montate senza `chown`).
 - La porta 445 libera sull'host.
 
@@ -64,18 +64,15 @@ tui-samba non modifica le cartelle già esistenti: se un path esiste, owner e mo
 
 Si accede con il nome dell'utente e la password impostata in tui-samba. Se più persone modificano lo stesso file contemporaneamente, vince l'ultimo salvataggio.
 
-## Configurazione della build
+## Aggiornare i tool
 
-Argomenti del Dockerfile (`docker compose build --build-arg NOME=valore`):
+I binari in `bin/amd64/` e `bin/arm64/` sono compilati da `Dockerfile.build` (clona i due tool da GitHub, applica la patch del default "Owner:group" e compila con la toolchain Go richiesta). Per rigenerarli:
 
-| Argomento | Default | Significato |
-|---|---|---|
-| `TUI_SAMBA_REF` | `v0.2.4` | tag di tui-samba da compilare |
-| `TUI_USERS_REF` | `v0.2.2` | tag di tui-users da compilare |
-| `DEFAULT_OWNER` | `root:users` | valore proposto in "Owner:group" |
-| `GO_IMAGE` | `golang:bookworm` | immagine usata per compilare |
+```
+sh build/rebuild-binaries.sh [--build-arg TUI_SAMBA_REF=vX.Y.Z] [--build-arg TUI_USERS_REF=vX.Y.Z]
+```
 
-Se cambi i tag, la build si ferma con un errore chiaro quando la riga da modificare in `form.go` non esiste più.
+Argomenti di `Dockerfile.build`: `TUI_SAMBA_REF` (default `v0.2.4`), `TUI_USERS_REF` (`v0.2.2`), `DEFAULT_OWNER` (`root:users`), `GO_IMAGE` (`golang:bookworm`). Se cambi i tag, la build si ferma con un errore chiaro quando la riga da modificare in `form.go` non esiste più. Poi `docker compose up -d --build` e commit di `bin/`.
 
 ## Persistenza
 
@@ -104,16 +101,18 @@ Verifica sintassi degli script, persistenza degli account, `systemctl` finto e (
 ## Struttura
 
 ```
-Dockerfile           build in due stadi (compila i tool, poi Debian + Samba)
+Dockerfile           immagine finale (Debian + Samba + binari di bin/)
+Dockerfile.build     compila i tool, solo per rigenerare bin/
+bin/                 tui-samba e tui-users precompilati (amd64, arm64)
 docker-compose.yml   un servizio, due volumi
 smb.conf             configurazione di partenza (solo al primo avvio)
 config/tui.toml      configurazione comune dei due tool (sudo = "")
 scripts/             entrypoint, finto systemctl, messaggio iniziale
-build/               patch del default di tui-samba
+build/               patch del default di tui-samba, rebuild-binaries.sh
 tests/               test senza Docker
 ANALISI.md           analisi: funzionamento, scelte, rischi
 ```
 
 ## Crediti
 
-tui-samba e tui-users sono di [tui-tools](https://github.com/tui-tools) (licenza MIT) e vengono compilati dal loro sorgente durante la build.
+tui-samba e tui-users sono di [tui-tools](https://github.com/tui-tools) (licenza MIT) e sono compilati dal loro sorgente (`Dockerfile.build`).
